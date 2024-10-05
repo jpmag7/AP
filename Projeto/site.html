@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            background: rgb(11,15,25);
+        }
+        
+        #container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            align-items: center;
+            justify-items: center;
+            width: 95%;
+            aspect-ratio: 3;
+            margin-top: 50px;
+        }
+        
+        .image {
+            width: 97%;
+            aspect-ratio: 1;
+            background-color: rgb(31,41,55);
+            cursor: pointer;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+        
+        #textInput {
+            position: fixed;
+            bottom: 20px;
+            color: white;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 500px;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #909090;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            background: rgb(31,41,55);
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div class="image"></div>
+        <div class="image"></div>
+        <div class="image"></div>
+    </div>
+    <input type="text" id="textInput" placeholder="Type your prompt..." onkeydown="handleKeyPress(event)">
+    
+    <script>
+        const serverURL = 'https://541a4409-4ad3-4b64-ad82-5d699e911861.deepnoteproject.com';
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const text = document.getElementById('textInput').value;
+                //document.getElementById('textInput').value = '';
+                sendPostRequest(text);
+            }
+        }
+        
+        function sendPostRequest(text) {
+            const requestBody = JSON.stringify({ text: text });
+            console.log("entered")
+            
+            fetch(`${serverURL}/send_prompt`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: requestBody,
+                timeout: 600000 // 10 minutes
+            })
+            .then(response => {console.log(response); return response.json()})
+            .then(data => updateRow(data.images))
+            .catch(error => console.error('Error:', error));
+        }
+        
+        function updateRow(images) {
+            console.log("Updating rows")
+            const container = document.getElementById('container');
+            container.innerHTML = '';
+            
+            images.forEach((imageUrl, index) => {
+                const imageElement = document.createElement('div');
+                imageElement.className = 'image';
+                imageElement.style.backgroundImage = `url(${imageUrl})`;
+                container.appendChild(imageElement);
+                
+                fetch(`${serverURL}/images/image_${index + 1}.png`)
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = URL.createObjectURL(blob);
+                        imageElement.style.backgroundImage = `url(${url})`;
+
+                        imageElement.addEventListener('click', () => {
+                            const anchorElement = document.createElement('a');
+                            anchorElement.href = url;
+                            anchorElement.download = `image_${index + 1}.png`;
+                            anchorElement.click();
+                        });
+
+                    })
+                    .catch(error => console.error('Error:', error));
+            });
+        }
+    </script>
+</body>
+</html>
